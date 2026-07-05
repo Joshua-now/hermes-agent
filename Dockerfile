@@ -25,5 +25,5 @@ WORKDIR /opt/hermes
 RUN chmod +x /opt/hermes/docker/entrypoint.sh
 
 ENV HERMES_HOME=/opt/data
-VOLUME [ "/opt/data" ]
+# VOLUME instruction removed — Railway rejects it; use a Railway Volume mounted at /opt/data
 ENTRYPOINT [ "/opt/hermes/docker/entrypoint.sh" ]
