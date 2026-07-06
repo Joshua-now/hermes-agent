@@ -6,7 +6,7 @@ ENV PYTHONUNBUFFERED=1
 # Install system dependencies in one layer, clear APT cache
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
-        build-essential nodejs npm python3 python3-pip ripgrep ffmpeg gcc python3-dev libffi-dev procps && \
+        build-essential nodejs npm python3 python3-pip ripgrep ffmpeg gcc python3-dev libffi-dev procps git curl && \
     rm -rf /var/lib/apt/lists/*
 
 COPY . /opt/hermes
@@ -23,6 +23,8 @@ RUN pip install --no-cache-dir uv --break-system-packages && \
 
 WORKDIR /opt/hermes
 RUN chmod +x /opt/hermes/docker/entrypoint.sh
+# Bake in bun + flyctl for the software-build workflow
+RUN curl -fsSL https://bun.sh/install | bash && ln -sf /root/.bun/bin/bun /usr/local/bin/bun && curl -L https://fly.io/install.sh | sh && ln -sf /root/.fly/bin/flyctl /usr/local/bin/flyctl
 
 ENV HERMES_HOME=/opt/data
 # VOLUME instruction removed — Railway rejects it; use a Railway Volume mounted at /opt/data
