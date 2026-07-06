@@ -25,6 +25,8 @@ WORKDIR /opt/hermes
 RUN chmod +x /opt/hermes/docker/entrypoint.sh
 # Bake in bun + flyctl for the software-build workflow
 RUN curl -fsSL https://bun.sh/install | bash && ln -sf /root/.bun/bin/bun /usr/local/bin/bun && curl -L https://fly.io/install.sh | sh && ln -sf /root/.fly/bin/flyctl /usr/local/bin/flyctl
+# Bake in gstack workflow rails so its skills register at boot
+RUN git clone --depth 1 https://github.com/Joshua-now/gstack.git /opt/gstack && cd /opt/gstack && GSTACK_SKIP_FONTS=1 GSTACK_SKIP_COREUTILS=1 ./setup --host hermes < /dev/null
 
 ENV HERMES_HOME=/opt/data
 # VOLUME instruction removed — Railway rejects it; use a Railway Volume mounted at /opt/data
