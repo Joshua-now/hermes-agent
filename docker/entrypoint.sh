@@ -94,4 +94,52 @@ except Exception as e:
     print("[entrypoint] model reconcile error: %s" % e)
 PYEOF
 
+# Efficiency tuning (lighter/cheaper): make Tool Search + compression explicit and
+# trim unused media tools from the Telegram agent. MCP servers auto-attach on every
+# platform (see hermes_cli/tools_config.py), so trimming toolsets never drops n8n/MCP.
+# Idempotent and guarded: only replaces the UNTOUCHED default Telegram preset.
+# Non-fatal by design: never blocks the agent from starting.
+python3 - <<'PYEOF2' || echo "[entrypoint] efficiency tune skipped"
+import os
+path = "/opt/data/config.yaml"
+try:
+    import yaml
+    with open(path) as f:
+        cfg = yaml.safe_load(f) or {}
+    changed = False
+
+    # 1) Tool Search: progressive disclosure for MCP/plugin tools (auto = only defer
+    #    when their schemas get big). Safe for free models. Explicit if unset.
+    tools = cfg.get("tools")
+    if not isinstance(tools, dict):
+        tools = {}; cfg["tools"] = tools
+    if not isinstance(tools.get("tool_search"), dict):
+        tools["tool_search"] = {"enabled": "auto"}; changed = True
+
+    # 2) Context compression on (default true) — make it explicit so it's guaranteed.
+    if not isinstance(cfg.get("compression"), dict):
+        cfg["compression"] = {"enabled": True}; changed = True
+
+    # 3) Trim Telegram to a lean set: drop vision/image_gen/tts (unused), add
+    #    memory + session_search (recall). Only if still the default preset.
+    LEAN = ["terminal", "file", "web", "browser", "skills", "todo",
+            "cronjob", "memory", "session_search", "send_message"]
+    pt = cfg.get("platform_toolsets")
+    if not isinstance(pt, dict):
+        pt = {}; cfg["platform_toolsets"] = pt
+    cur = pt.get("telegram")
+    if cur is None or cur == ["hermes-telegram"]:
+        pt["telegram"] = LEAN; changed = True
+
+    if changed:
+        with open(path, "w") as f:
+            yaml.safe_dump(cfg, f, default_flow_style=False)
+    print("[entrypoint] efficiency: tool_search=%s compression=%s telegram=%s" % (
+        cfg.get("tools", {}).get("tool_search"),
+        cfg.get("compression"),
+        cfg.get("platform_toolsets", {}).get("telegram")))
+except Exception as e:
+    print("[entrypoint] efficiency tune error: %s" % e)
+PYEOF2
+
 exec hermes "$@"
