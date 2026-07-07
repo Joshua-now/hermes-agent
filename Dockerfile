@@ -1,4 +1,4 @@
-```dockerfile
+
 FROM debian:13.4
 
 # Disable Python stdout buffering to ensure logs are printed immediately
