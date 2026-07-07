@@ -1,6 +1,17 @@
+```bash
 #!/bin/bash
 # Docker entrypoint: bootstrap config files into the mounted volume, then run hermes.
 set -e
+
+# Start Tailscale
+if [ -n "$TAILSCALE_AUTHKEY" ]; then
+    echo "Starting Tailscale..."
+    mkdir -p /var/lib/tailscale /var/run/tailscale
+    tailscaled --state=/var/lib/tailscale/tailscaled.state --socket=/var/run/tailscale/tailscaled.sock &
+    sleep 2
+    tailscale up --authkey=$TAILSCALE_AUTHKEY --hostname=railway-hermes
+    echo "Tailscale connected!"
+fi
 
 HERMES_HOME="/opt/data"
 INSTALL_DIR="/opt/hermes"

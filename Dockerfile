@@ -1,3 +1,4 @@
+```dockerfile
 FROM debian:13.4
 
 # Disable Python stdout buffering to ensure logs are printed immediately
@@ -8,6 +9,9 @@ RUN apt-get update && \
     apt-get install -y --no-install-recommends \
         build-essential nodejs npm python3 python3-pip ripgrep ffmpeg gcc python3-dev libffi-dev procps git curl unzip && \
     rm -rf /var/lib/apt/lists/*
+
+# Install Tailscale
+RUN curl -fsSL https://tailscale.com/install.sh | sh
 
 COPY . /opt/hermes
 WORKDIR /opt/hermes
