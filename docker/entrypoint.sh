@@ -4,7 +4,7 @@ set -e
 
 # --- Start Tailscale (userspace networking; Railway containers have no TUN device) ---
 # Non-fatal by design: a Tailscale problem must never stop the agent from starting.
-TS_KEY="${TAILSCALE_AUTH_KEY:-$TAILSCALE_AUTHKEY}"
+TS_KEY="${TAILSCALE_AUTH_KEY:-${TAILSCALE_AUTHKEY:-$TS_AUTHKEY}}"
 if [ -n "$TS_KEY" ]; then
     echo "Starting Tailscale (userspace networking)..."
     mkdir -p /var/lib/tailscale /var/run/tailscale
@@ -62,5 +62,36 @@ fi
 if [ -d "$INSTALL_DIR/skills" ]; then
     python3 "$INSTALL_DIR/tools/skills_sync.py"
 fi
+
+# Reconcile model routing from Railway env vars. config.yaml on the volume otherwise
+# overrides env (provider/base_url/model), so we write env values into it on every boot.
+# Non-fatal by design: never blocks the agent from starting.
+python3 - <<'PYEOF' || echo "[entrypoint] model reconcile skipped"
+import os
+path = "/opt/data/config.yaml"
+try:
+    import yaml
+    with open(path) as f:
+        cfg = yaml.safe_load(f) or {}
+    m = cfg.get("model")
+    if not isinstance(m, dict):
+        m = {}
+        cfg["model"] = m
+    prov  = os.environ.get("HERMES_INFERENCE_PROVIDER")
+    base  = os.environ.get("OPENAI_BASE_URL")
+    model = os.environ.get("HERMES_MODEL")
+    key   = os.environ.get("OPENAI_API_KEY")
+    if prov:  m["provider"] = prov
+    if base:  m["base_url"] = base
+    if model:
+        m["model"] = model
+        m["default"] = model
+    if key:   m["api_key"] = key
+    with open(path, "w") as f:
+        yaml.safe_dump(cfg, f, default_flow_style=False)
+    print("[entrypoint] reconciled model: provider=%s base_url=%s model=%s" % (prov, base, model))
+except Exception as e:
+    print("[entrypoint] model reconcile error: %s" % e)
+PYEOF
 
 exec hermes "$@"
