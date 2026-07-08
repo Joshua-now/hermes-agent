@@ -122,13 +122,16 @@ try:
 
     # 3) Trim Telegram to a lean set: drop vision/image_gen/tts (unused), add
     #    memory + session_search (recall). Only if still the default preset.
-    LEAN = ["terminal", "file", "web", "browser", "skills", "todo",
+    # Dropped `browser` (~12 tools, Browserbase-gated) — Hermes reaches Railway/Telnyx/
+    # GitHub/GHL via their APIs (terminal/code/MCP), not a headless browser. Kept `web`
+    # (search + read page). This carves a big chunk off the ~8.6K tool-token load.
+    LEAN = ["terminal", "file", "web", "skills", "todo",
             "cronjob", "memory", "session_search", "send_message"]
     pt = cfg.get("platform_toolsets")
     if not isinstance(pt, dict):
         pt = {}; cfg["platform_toolsets"] = pt
-    cur = pt.get("telegram")
-    if cur is None or cur == ["hermes-telegram"]:
+    # Entrypoint owns the Telegram toolset — always converge to LEAN (idempotent).
+    if pt.get("telegram") != LEAN:
         pt["telegram"] = LEAN; changed = True
 
     if changed:
