@@ -32,6 +32,15 @@ RUN curl -fsSL https://bun.sh/install | bash && ln -sf /root/.bun/bin/bun /usr/l
 # Bake in gstack workflow rails so its skills register at boot
 RUN git clone --depth 1 https://github.com/Joshua-now/gstack.git /opt/gstack && cd /opt/gstack && GSTACK_SKIP_FONTS=1 GSTACK_SKIP_COREUTILS=1 ./setup --host hermes < /dev/null
 
+# Bake in Railway CLI, GitHub CLI, and jq for the agent's terminal tooling
+RUN npm install -g @railway/cli && \
+    mkdir -p -m 755 /etc/apt/keyrings && \
+    curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg -o /etc/apt/keyrings/githubcli-archive-keyring.gpg && \
+    chmod go+r /etc/apt/keyrings/githubcli-archive-keyring.gpg && \
+    echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" > /etc/apt/sources.list.d/github-cli.list && \
+    apt-get update && apt-get install -y jq gh && \
+    rm -rf /var/lib/apt/lists/*
+
 ENV HERMES_HOME=/opt/data
 # VOLUME instruction removed — Railway rejects it; use a Railway Volume mounted at /opt/data
 ENTRYPOINT [ "/opt/hermes/docker/entrypoint.sh" ]
